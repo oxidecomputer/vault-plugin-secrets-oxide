@@ -138,8 +138,8 @@ func (b *backend) pathPrincipalRead(ctx context.Context, req *logical.Request, d
 	}
 	data := map[string]any{
 		"host":        principal.Host,
-		"default_ttl": principal.DefaultTTL,
-		"max_ttl":     principal.MaxTTL,
+		"default_ttl": principal.DefaultTTL.Seconds(),
+		"max_ttl":     principal.MaxTTL.Seconds(),
 	}
 	return &logical.Response{
 		Data: data,

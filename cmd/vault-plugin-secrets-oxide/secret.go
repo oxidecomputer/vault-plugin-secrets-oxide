@@ -32,20 +32,20 @@ func (b *backend) tokenRevoke(ctx context.Context, req *logical.Request, d *fram
 	if !ok {
 		return nil, errors.New("secret is missing token_id data")
 	}
-	configName, ok := req.Secret.InternalData["config"].(string)
+	principalName, ok := req.Secret.InternalData["principal"].(string)
 	if !ok {
-		return nil, errors.New("secret is missing config data")
+		return nil, errors.New("secret is missing principal data")
 	}
 
-	config, err := b.getConfig(ctx, req.Storage, configName)
+	principal, err := b.getPrincipal(ctx, req.Storage, principalName)
 	if err != nil {
-		return nil, fmt.Errorf("retrieving config %q: %w", configName, err)
+		return nil, fmt.Errorf("retrieving principal %q: %w", principalName, err)
 	}
-	if config == nil {
-		return nil, fmt.Errorf("config %q no longer exists", configName)
+	if principal == nil {
+		return nil, fmt.Errorf("principal %q no longer exists", principalName)
 	}
 
-	oxideClient, err := oxide.NewClient(oxide.WithHost(config.Host), oxide.WithToken(config.Token))
+	oxideClient, err := oxide.NewClient(oxide.WithHost(principal.Host), oxide.WithToken(principal.Token))
 	if err != nil {
 		return nil, fmt.Errorf("building oxide client: %w", err)
 	}

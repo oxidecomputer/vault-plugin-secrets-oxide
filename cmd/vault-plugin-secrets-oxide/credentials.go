@@ -43,27 +43,27 @@ func (b *backend) pathCredentials() *framework.Path {
 }
 
 func (b *backend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	configName := d.Get("name").(string)
+	principalName := d.Get("name").(string)
 
-	config, err := b.getConfig(ctx, req.Storage, configName)
+	principal, err := b.getPrincipal(ctx, req.Storage, principalName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 
-	if config == nil {
+	if principal == nil {
 		return nil, errors.New("error retrieving role: role is nil")
 	}
 
-	ttl := config.DefaultTTL
+	ttl := principal.DefaultTTL
 	if reqTTL, ok := d.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(reqTTL.(int))
 	}
-	ttl, _, err = framework.CalculateTTL(b.System(), ttl, config.DefaultTTL, 0, config.MaxTTL, 0, time.Time{})
+	ttl, _, err = framework.CalculateTTL(b.System(), ttl, principal.DefaultTTL, 0, principal.MaxTTL, 0, time.Time{})
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := b.createDeviceToken(ctx, config, ttl)
+	token, err := b.createDeviceToken(ctx, principal, ttl)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +74,8 @@ func (b *backend) pathCredentialsRead(ctx context.Context, req *logical.Request,
 		"token_id":     token.TokenID,
 		"time_expires": token.TimeExpires,
 	}, map[string]any{
-		"token_id": token.TokenID,
-		"config":   configName,
+		"token_id":  token.TokenID,
+		"principal": principalName,
 	})
 
 	resp.Secret.TTL = ttl
@@ -138,13 +138,13 @@ func makeDeviceFormRequest(ctx context.Context, url string, body url.Values) (*h
 	return deviceHTTPClient.Do(req)
 }
 
-func (b *backend) createDeviceToken(ctx context.Context, config *oxideConfig, ttl time.Duration) (*deviceTokenResp, error) {
-	oxideClient, err := oxide.NewClient(oxide.WithHost(config.Host), oxide.WithToken(config.Token))
+func (b *backend) createDeviceToken(ctx context.Context, principal *oxidePrincipal, ttl time.Duration) (*deviceTokenResp, error) {
+	oxideClient, err := oxide.NewClient(oxide.WithHost(principal.Host), oxide.WithToken(principal.Token))
 	if err != nil {
 		return nil, fmt.Errorf("building oxide client: %w", err)
 	}
 
-	authHTTPResp, err := makeDeviceFormRequest(ctx, config.Host+"/device/auth", deviceAuthReq{
+	authHTTPResp, err := makeDeviceFormRequest(ctx, principal.Host+"/device/auth", deviceAuthReq{
 		ClientID:   clientID,
 		TTLSeconds: int(ttl.Seconds()),
 	}.values())
@@ -178,7 +178,7 @@ func (b *backend) createDeviceToken(ctx context.Context, config *oxideConfig, tt
 		return nil, fmt.Errorf("confirming device grant: got status %d, expected %d", confirmHTTPResp.StatusCode, http.StatusNoContent)
 	}
 
-	tokenHTTPResp, err := makeDeviceFormRequest(ctx, config.Host+"/device/token", deviceTokenReq{
+	tokenHTTPResp, err := makeDeviceFormRequest(ctx, principal.Host+"/device/token", deviceTokenReq{
 		GrantType:  deviceCodeGrantType,
 		DeviceCode: authResp.DeviceCode,
 		ClientID:   clientID,
