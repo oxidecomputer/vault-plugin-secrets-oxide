@@ -1,0 +1,3 @@
+= vault-plugin-secrets-oxide
+
+A proof of concept Vault/OpenBao secrets plugin that provides ephemeral Oxide access credentials based on the device auth flow.
