@@ -52,6 +52,7 @@ func Backend(c *logical.BackendConfig) *backend {
 		BackendType: logical.TypeLogical,
 		Paths: []*framework.Path{
 			b.pathPrincipal(),
+			b.pathListPrincipal(),
 			b.pathCredentials(),
 		},
 		Secrets: b.secrets(),

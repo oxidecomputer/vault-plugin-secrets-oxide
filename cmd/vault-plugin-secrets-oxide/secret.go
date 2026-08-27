@@ -22,12 +22,13 @@ func (b *backend) secrets() []*framework.Secret {
 					Type: framework.TypeString,
 				},
 			},
-			Revoke: b.tokenRevoke,
+			Revoke: b.handleTokenRevoke,
 		},
 	}
 }
 
-func (b *backend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+// handleTokenRevoke revokes the Oxide device auth token. Note that revocation is best-effort only: the client can use the Oxide device auth token provided by the plugin to request a second device auth token directly from Oxide, and that derived token won't be revoked when the original token is revoked.
+func (b *backend) handleTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenID, ok := req.Secret.InternalData["token_id"].(string)
 	if !ok {
 		return nil, errors.New("secret is missing token_id data")

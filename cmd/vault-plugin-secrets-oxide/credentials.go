@@ -36,13 +36,13 @@ func (b *backend) pathCredentials() *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCredentialsRead,
-			logical.UpdateOperation: b.pathCredentialsRead,
+			logical.ReadOperation:   b.handleCredentialsRead,
+			logical.UpdateOperation: b.handleCredentialsRead,
 		},
 	}
 }
 
-func (b *backend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) handleCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	principalName := d.Get("name").(string)
 
 	principal, err := b.getPrincipal(ctx, req.Storage, principalName)

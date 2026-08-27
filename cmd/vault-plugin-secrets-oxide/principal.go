@@ -41,12 +41,23 @@ func (b *backend) pathPrincipal() *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathPrincipalCreateUpdate,
-			logical.UpdateOperation: b.pathPrincipalCreateUpdate,
-			logical.DeleteOperation: b.pathPrincipalDelete,
-			logical.ReadOperation:   b.pathPrincipalRead,
+			logical.CreateOperation: b.handlePrincipalCreateUpdate,
+			logical.UpdateOperation: b.handlePrincipalCreateUpdate,
+			logical.DeleteOperation: b.handlePrincipalDelete,
+			logical.ReadOperation:   b.handlePrincipalRead,
 		},
-		ExistenceCheck: b.pathPrincipalExistenceCheck,
+		ExistenceCheck: b.handlePrincipalExistenceCheck,
+	}
+}
+
+func (b *backend) pathListPrincipal() *framework.Path {
+	return &framework.Path{
+		Pattern: "principal/?",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.handlePrincipal,
+			},
+		},
 	}
 }
 
@@ -66,7 +77,7 @@ func (b *backend) getPrincipal(ctx context.Context, s logical.Storage, name stri
 	return principal, nil
 }
 
-func (b *backend) pathPrincipalCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) handlePrincipalCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	principalName := d.Get("name").(string)
 	if principalName == "" {
 		return logical.ErrorResponse("must set principal name"), nil
@@ -111,7 +122,7 @@ func (b *backend) pathPrincipalCreateUpdate(ctx context.Context, req *logical.Re
 	return &logical.Response{}, nil
 }
 
-func (b *backend) pathPrincipalDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) handlePrincipalDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	principalName := d.Get("name").(string)
 	if principalName == "" {
 		return logical.ErrorResponse("must set principal name"), nil
@@ -124,7 +135,7 @@ func (b *backend) pathPrincipalDelete(ctx context.Context, req *logical.Request,
 	return &logical.Response{}, nil
 }
 
-func (b *backend) pathPrincipalRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) handlePrincipalRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	principalName := d.Get("name").(string)
 	if principalName == "" {
 		return logical.ErrorResponse("must set principal name"), nil
@@ -146,7 +157,15 @@ func (b *backend) pathPrincipalRead(ctx context.Context, req *logical.Request, d
 	}, nil
 }
 
-func (b *backend) pathPrincipalExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) handlePrincipal(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	principals, err := req.Storage.List(ctx, "principal/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(principals), nil
+}
+
+func (b *backend) handlePrincipalExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	principal, err := b.getPrincipal(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
