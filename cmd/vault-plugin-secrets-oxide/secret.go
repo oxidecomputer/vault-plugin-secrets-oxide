@@ -43,7 +43,7 @@ func (b *backend) handleTokenRevoke(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("retrieving principal %q: %w", principalName, err)
 	}
 	if principal == nil {
-		return nil, fmt.Errorf("principal %q no longer exists", principalName)
+		return nil, fmt.Errorf("principal %q does not exist", principalName)
 	}
 
 	oxideClient, err := oxide.NewClient(oxide.WithHost(principal.Host), oxide.WithToken(principal.Token))
@@ -54,6 +54,10 @@ func (b *backend) handleTokenRevoke(ctx context.Context, req *logical.Request, d
 	if err := oxideClient.CurrentUserAccessTokenDelete(ctx, oxide.CurrentUserAccessTokenDeleteParams{
 		TokenId: tokenID,
 	}); err != nil {
+		if errors.Is(err, oxide.ErrHTTP404) {
+			b.Logger().Info("ignoring 404 revoking oxide token", "token_id", tokenID, "principal", principalName)
+			return nil, nil
+		}
 		return nil, fmt.Errorf("revoking oxide token %s: %w", tokenID, err)
 	}
 
