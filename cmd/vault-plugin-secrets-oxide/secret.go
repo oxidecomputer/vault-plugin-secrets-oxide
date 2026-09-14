@@ -27,8 +27,15 @@ func (b *backend) secrets() []*framework.Secret {
 	}
 }
 
-// handleTokenRevoke revokes the Oxide device auth token. Note that revocation is best-effort only: the client can use the Oxide device auth token provided by the plugin to request a second device auth token directly from Oxide, and that derived token won't be revoked when the original token is revoked.
-func (b *backend) handleTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+// handleTokenRevoke revokes the Oxide device auth token. Note that revocation is best-effort only:
+// the client can use the Oxide device auth token provided by the plugin to request a second device
+// auth token directly from Oxide, and that derived token won't be revoked when the original token
+// is revoked.
+func (b *backend) handleTokenRevoke(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
 	tokenID, ok := req.Secret.InternalData["token_id"].(string)
 	if !ok {
 		return nil, errors.New("secret is missing token_id data")
@@ -46,16 +53,23 @@ func (b *backend) handleTokenRevoke(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("principal %q does not exist", principalName)
 	}
 
-	oxideClient, err := oxide.NewClient(oxide.WithHost(principal.Host), oxide.WithToken(principal.Token))
+	oxideClient, err := oxide.NewClient(
+		oxide.WithHost(principal.Host),
+		oxide.WithToken(principal.Token),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("building oxide client: %w", err)
 	}
 
-	if err := oxideClient.CurrentUserAccessTokenDelete(ctx, oxide.CurrentUserAccessTokenDeleteParams{
-		TokenId: tokenID,
-	}); err != nil {
+	if err := oxideClient.CurrentUserAccessTokenDelete(
+		ctx,
+		oxide.CurrentUserAccessTokenDeleteParams{
+			TokenId: tokenID,
+		},
+	); err != nil {
 		if errors.Is(err, oxide.ErrHTTP404) {
-			b.Logger().Info("ignoring 404 revoking oxide token", "token_id", tokenID, "principal", principalName)
+			b.Logger().
+				Info("ignoring 404 revoking oxide token", "token_id", tokenID, "principal", principalName)
 			return nil, nil
 		}
 		return nil, fmt.Errorf("revoking oxide token %s: %w", tokenID, err)

@@ -42,7 +42,11 @@ func (b *backend) pathCredentials() *framework.Path {
 	}
 }
 
-func (b *backend) handleCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) handleCredentialsRead(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
 	principalName := d.Get("name").(string)
 
 	principal, err := b.getPrincipal(ctx, req.Storage, principalName)
@@ -58,7 +62,15 @@ func (b *backend) handleCredentialsRead(ctx context.Context, req *logical.Reques
 	if reqTTL, ok := d.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(reqTTL.(int))
 	}
-	ttl, _, err = framework.CalculateTTL(b.System(), ttl, principal.DefaultTTL, 0, principal.MaxTTL, 0, time.Time{})
+	ttl, _, err = framework.CalculateTTL(
+		b.System(),
+		ttl,
+		principal.DefaultTTL,
+		0,
+		principal.MaxTTL,
+		0,
+		time.Time{},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +140,11 @@ type deviceTokenResp struct {
 	TimeExpires *time.Time `json:"time_expires"`
 }
 
-func makeDeviceFormRequest(ctx context.Context, url string, body url.Values) (*http.Response, error) {
+func makeDeviceFormRequest(
+	ctx context.Context,
+	url string,
+	body url.Values,
+) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(body.Encode()))
 	if err != nil {
 		return nil, err
@@ -138,8 +154,15 @@ func makeDeviceFormRequest(ctx context.Context, url string, body url.Values) (*h
 	return deviceHTTPClient.Do(req)
 }
 
-func (b *backend) createDeviceToken(ctx context.Context, principal *oxidePrincipal, ttl time.Duration) (*deviceTokenResp, error) {
-	oxideClient, err := oxide.NewClient(oxide.WithHost(principal.Host), oxide.WithToken(principal.Token))
+func (b *backend) createDeviceToken(
+	ctx context.Context,
+	principal *oxidePrincipal,
+	ttl time.Duration,
+) (*deviceTokenResp, error) {
+	oxideClient, err := oxide.NewClient(
+		oxide.WithHost(principal.Host),
+		oxide.WithToken(principal.Token),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("building oxide client: %w", err)
 	}
@@ -153,7 +176,11 @@ func (b *backend) createDeviceToken(ctx context.Context, principal *oxidePrincip
 	}
 	defer authHTTPResp.Body.Close()
 	if authHTTPResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("requesting device code: got status %d, expected %d", authHTTPResp.StatusCode, http.StatusOK)
+		return nil, fmt.Errorf(
+			"requesting device code: got status %d, expected %d",
+			authHTTPResp.StatusCode,
+			http.StatusOK,
+		)
 	}
 
 	var authResp deviceAuthResp
@@ -175,7 +202,11 @@ func (b *backend) createDeviceToken(ctx context.Context, principal *oxidePrincip
 	}
 	defer confirmHTTPResp.Body.Close()
 	if confirmHTTPResp.StatusCode != http.StatusNoContent {
-		return nil, fmt.Errorf("confirming device grant: got status %d, expected %d", confirmHTTPResp.StatusCode, http.StatusNoContent)
+		return nil, fmt.Errorf(
+			"confirming device grant: got status %d, expected %d",
+			confirmHTTPResp.StatusCode,
+			http.StatusNoContent,
+		)
 	}
 
 	tokenHTTPResp, err := makeDeviceFormRequest(ctx, principal.Host+"/device/token", deviceTokenReq{
@@ -188,7 +219,11 @@ func (b *backend) createDeviceToken(ctx context.Context, principal *oxidePrincip
 	}
 	defer tokenHTTPResp.Body.Close()
 	if tokenHTTPResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("exchanging device code: got status %d, expected %d", tokenHTTPResp.StatusCode, http.StatusOK)
+		return nil, fmt.Errorf(
+			"exchanging device code: got status %d, expected %d",
+			tokenHTTPResp.StatusCode,
+			http.StatusOK,
+		)
 	}
 
 	var tokenResp deviceTokenResp
