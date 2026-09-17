@@ -44,7 +44,7 @@ type backend struct {
 
 const backendHelp = "The Oxide secrets backend mints short-lived Oxide access tokens."
 
-func Backend(c *logical.BackendConfig) *backend {
+func Backend(_ *logical.BackendConfig) *backend {
 	var b backend
 
 	b.Backend = &framework.Backend{
