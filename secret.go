@@ -1,4 +1,4 @@
-package main
+package oxidesecrets
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/oxidecomputer/oxide.go/oxide"
 )
 
-//go:generate go tool -modfile=../../tools/go.mod mockgen -source=secret.go -destination=oxide_client_mock_test.go -package=main -mock_names=oxideClient=MockOxideClient
+//go:generate go tool -modfile=tools/go.mod mockgen -source=secret.go -destination=oxide_client_mock_test.go -package=oxidesecrets -mock_names=oxideClient=MockOxideClient
 type oxideClient interface {
 	CurrentUserAccessTokenDelete(context.Context, oxide.CurrentUserAccessTokenDeleteParams) error
 	MakeRequest(context.Context, oxide.Request) (*http.Response, error)
