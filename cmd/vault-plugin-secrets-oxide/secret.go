@@ -4,11 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/openbao/openbao/sdk/v2/framework"
 	"github.com/openbao/openbao/sdk/v2/logical"
 	"github.com/oxidecomputer/oxide.go/oxide"
 )
+
+//go:generate go tool -modfile=../../tools/go.mod mockgen -source=secret.go -destination=oxide_client_mock_test.go -package=main -mock_names=oxideClient=MockOxideClient
+type oxideClient interface {
+	CurrentUserAccessTokenDelete(context.Context, oxide.CurrentUserAccessTokenDeleteParams) error
+	MakeRequest(context.Context, oxide.Request) (*http.Response, error)
+}
 
 func (b *backend) secrets() []*framework.Secret {
 	return []*framework.Secret{
@@ -61,6 +68,19 @@ func (b *backend) handleTokenRevoke(
 		return nil, fmt.Errorf("building oxide client: %w", err)
 	}
 
+	if err := b.revokeToken(ctx, oxideClient, tokenID, principalName); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *backend) revokeToken(
+	ctx context.Context,
+	oxideClient oxideClient,
+	tokenID string,
+	principalName string,
+) error {
 	if err := oxideClient.CurrentUserAccessTokenDelete(
 		ctx,
 		oxide.CurrentUserAccessTokenDeleteParams{
@@ -70,10 +90,10 @@ func (b *backend) handleTokenRevoke(
 		if errors.Is(err, oxide.ErrHTTP404) {
 			b.Logger().
 				Info("ignoring 404 revoking oxide token", "token_id", tokenID, "principal", principalName)
-			return nil, nil
+			return nil
 		}
-		return nil, fmt.Errorf("revoking oxide token %s: %w", tokenID, err)
+		return fmt.Errorf("revoking oxide token %s: %w", tokenID, err)
 	}
 
-	return nil, nil
+	return nil
 }
