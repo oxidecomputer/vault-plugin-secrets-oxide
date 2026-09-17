@@ -1,0 +1,26 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - make generate
+
+builds:
+  - id: plugin
+    main: ./cmd/vault-plugin-secrets-oxide
+    binary: vault-plugin-secrets-oxide
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [binary]
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}"
+
+release:
+  prerelease: auto
