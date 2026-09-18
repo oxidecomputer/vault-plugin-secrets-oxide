@@ -10,13 +10,21 @@ import (
 
 	"github.com/openbao/openbao/sdk/v2/framework"
 	"github.com/openbao/openbao/sdk/v2/logical"
+	"github.com/oxidecomputer/oxide.go/oxide"
 )
 
 type oxidePrincipal struct {
 	Host       string        `json:"host"`
 	Token      string        `json:"token"`
+	UserID     string        `json:"user_id"`
 	DefaultTTL time.Duration `json:"default_ttl"`
 	MaxTTL     time.Duration `json:"max_ttl"`
+}
+
+type oxideClientFactory func(string, string) (oxideClient, error)
+
+func makeOxideClient(host string, token string) (oxideClient, error) {
+	return oxide.NewClient(oxide.WithHost(host), oxide.WithToken(token))
 }
 
 func (b *backend) pathPrincipal() *framework.Path {
@@ -81,6 +89,61 @@ func (b *backend) getPrincipal(
 	return principal, nil
 }
 
+func updatePrincipal(
+	ctx context.Context,
+	clientBuilder oxideClientFactory,
+	principalName string,
+	principal *oxidePrincipal,
+	data *framework.FieldData,
+) error {
+	// Update the host if not set. If the host changes, we can't revoke previously-issued tokens for
+	// that host, so we treat the host as immutable.
+	if host, ok := data.GetOk("host"); ok {
+		if principal.Host != "" && principal.Host != host.(string) {
+			return fmt.Errorf(
+				"principal %q cannot change host from %q to %q",
+				principalName,
+				principal.Host,
+				host.(string),
+			)
+		}
+		principal.Host = host.(string)
+	}
+	// Update the token if not set, or if provided a new token for the previously-configured user.
+	// If the user identity changes, we can't revoke previously-issued tokens for that identity, so
+	// we treat the identity (but not necessarily the token) as immutable.
+	if token, ok := data.GetOk("token"); ok {
+		oxideClient, err := clientBuilder(principal.Host, token.(string))
+		if err != nil {
+			return fmt.Errorf("building oxide client: %w", err)
+		}
+
+		user, err := oxideClient.CurrentUserView(ctx)
+		if err != nil {
+			return fmt.Errorf("looking up principal user: %w", err)
+		}
+
+		if principal.UserID != "" && principal.UserID != user.Id {
+			return fmt.Errorf(
+				"principal %q uses user id %q; cannot change to a different user id %q",
+				principalName,
+				principal.UserID,
+				user.Id,
+			)
+		}
+
+		principal.Token = token.(string)
+		principal.UserID = user.Id
+	}
+	if defaultTTL, ok := data.GetOk("default_ttl"); ok {
+		principal.DefaultTTL = time.Second * time.Duration(defaultTTL.(int))
+	}
+	if maxTTL, ok := data.GetOk("max_ttl"); ok {
+		principal.MaxTTL = time.Second * time.Duration(maxTTL.(int))
+	}
+	return nil
+}
+
 func (b *backend) handlePrincipalCreateUpdate(
 	ctx context.Context,
 	req *logical.Request,
@@ -103,17 +166,8 @@ func (b *backend) handlePrincipalCreateUpdate(
 		principal = new(oxidePrincipal)
 	}
 
-	if host, ok := d.GetOk("host"); ok {
-		principal.Host = host.(string)
-	}
-	if token, ok := d.GetOk("token"); ok {
-		principal.Token = token.(string)
-	}
-	if defaultTTL, ok := d.GetOk("default_ttl"); ok {
-		principal.DefaultTTL = time.Second * time.Duration(defaultTTL.(int))
-	}
-	if maxTTL, ok := d.GetOk("max_ttl"); ok {
-		principal.MaxTTL = time.Second * time.Duration(maxTTL.(int))
+	if err := updatePrincipal(ctx, makeOxideClient, principalName, principal, d); err != nil {
+		return nil, fmt.Errorf("error updating principal %q: %w", principalName, err)
 	}
 
 	entry, err := logical.StorageEntryJSON("principal/"+strings.ToLower(principalName), principal)
@@ -130,6 +184,11 @@ func (b *backend) handlePrincipalCreateUpdate(
 	return &logical.Response{}, nil
 }
 
+// handlePrincipalDelete deletes a principal from storage.
+//
+// Note: Deleting a principal doesn't delete its associated ephemeral tokens. The operator should
+// either revoke leases before deleting the principal or accept that stranded tokens persist up to
+// their TTL.
 func (b *backend) handlePrincipalDelete(
 	ctx context.Context,
 	req *logical.Request,

@@ -56,6 +56,21 @@ func (mr *MockOxideClientMockRecorder) CurrentUserAccessTokenDelete(arg0, arg1 a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentUserAccessTokenDelete", reflect.TypeOf((*MockOxideClient)(nil).CurrentUserAccessTokenDelete), arg0, arg1)
 }
 
+// CurrentUserView mocks base method.
+func (m *MockOxideClient) CurrentUserView(arg0 context.Context) (*oxide.CurrentUser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CurrentUserView", arg0)
+	ret0, _ := ret[0].(*oxide.CurrentUser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CurrentUserView indicates an expected call of CurrentUserView.
+func (mr *MockOxideClientMockRecorder) CurrentUserView(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentUserView", reflect.TypeOf((*MockOxideClient)(nil).CurrentUserView), arg0)
+}
+
 // MakeRequest mocks base method.
 func (m *MockOxideClient) MakeRequest(arg0 context.Context, arg1 oxide.Request) (*http.Response, error) {
 	m.ctrl.T.Helper()
