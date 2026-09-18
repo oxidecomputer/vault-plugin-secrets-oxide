@@ -75,7 +75,7 @@ func (b *backend) handleCredentialsRead(
 		return nil, err
 	}
 
-	token, err := b.createDeviceToken(ctx, principal, ttl)
+	token, err := createDeviceToken(ctx, principal, ttl)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func makeDeviceFormRequest(
 	return deviceHTTPClient.Do(req)
 }
 
-func (b *backend) createDeviceToken(
+func createDeviceToken(
 	ctx context.Context,
 	principal *oxidePrincipal,
 	ttl time.Duration,
