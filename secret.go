@@ -4,19 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/openbao/openbao/sdk/v2/framework"
 	"github.com/openbao/openbao/sdk/v2/logical"
 	"github.com/oxidecomputer/oxide.go/oxide"
 )
-
-//go:generate go tool -modfile=tools/go.mod mockgen -source=secret.go -destination=oxide_client_mock_test.go -package=oxidesecrets -mock_names=oxideClient=MockOxideClient
-type oxideClient interface {
-	CurrentUserView(context.Context) (*oxide.CurrentUser, error)
-	CurrentUserAccessTokenDelete(context.Context, oxide.CurrentUserAccessTokenDeleteParams) error
-	MakeRequest(context.Context, oxide.Request) (*http.Response, error)
-}
 
 func (b *backend) secrets() []*framework.Secret {
 	return []*framework.Secret{
