@@ -10,7 +10,6 @@ import (
 
 	"github.com/openbao/openbao/sdk/v2/framework"
 	"github.com/openbao/openbao/sdk/v2/logical"
-	"github.com/oxidecomputer/oxide.go/oxide"
 )
 
 type oxidePrincipal struct {
@@ -19,12 +18,6 @@ type oxidePrincipal struct {
 	UserID     string        `json:"user_id"`
 	DefaultTTL time.Duration `json:"default_ttl"`
 	MaxTTL     time.Duration `json:"max_ttl"`
-}
-
-type oxideClientFactory func(string, string) (oxideClient, error)
-
-func makeOxideClient(host string, token string) (oxideClient, error) {
-	return oxide.NewClient(oxide.WithHost(host), oxide.WithToken(token))
 }
 
 func (b *backend) pathPrincipal() *framework.Path {
