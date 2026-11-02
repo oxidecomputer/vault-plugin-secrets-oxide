@@ -41,11 +41,19 @@ func (b *backend) pathPrincipal() *framework.Path {
 				Type: framework.TypeDurationSecond,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.handlePrincipalCreateUpdate,
-			logical.UpdateOperation: b.handlePrincipalCreateUpdate,
-			logical.DeleteOperation: b.handlePrincipalDelete,
-			logical.ReadOperation:   b.handlePrincipalRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.handlePrincipalCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePrincipalCreateUpdate,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePrincipalDelete,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePrincipalRead,
+			},
 		},
 		ExistenceCheck: b.handlePrincipalExistenceCheck,
 	}
