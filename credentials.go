@@ -35,9 +35,13 @@ func (b *backend) pathCredentials() *framework.Path {
 				Type: framework.TypeDurationSecond,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.handleCredentialsRead,
-			logical.UpdateOperation: b.handleCredentialsRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleCredentialsRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleCredentialsRead,
+			},
 		},
 	}
 }
